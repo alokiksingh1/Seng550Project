@@ -1,0 +1,6 @@
+{
+    "app_name": "CalgaryHousingPricePrediction",
+    "master": "local[*]",
+    "log_level": "ERROR"
+}
+  
