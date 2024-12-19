@@ -45,6 +45,9 @@ def fetch_all_data_with_pagination(api_url, limit, total_limit, raw_data_path):
         print("No data fetched.")
         return False
 
+
+
+
 if __name__ == "__main__":
     api_url = "https://data.calgary.ca/resource/4ur7-wsgc.json"
     raw_data_path = "../data/raw/calgary_housing_raw.csv"
