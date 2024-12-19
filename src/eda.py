@@ -1,96 +1,55 @@
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
-import glob
+import seaborn as sns
 import os
 
-# Paths
-PROCESSED_DATA_PATH = "../data/processed/calgary_housing_cleaned/"
-FIGURES_PATH = "../reports/figures"
+def load_data(file_path):
+    """Load data for EDA."""
+    return pd.read_csv(file_path)
 
-# Ensure the directory for saving plots exists
-os.makedirs(FIGURES_PATH, exist_ok=True)
+def plot_distributions(df, numeric_columns):
+    """Plot distributions for numeric columns."""
+    for column in numeric_columns:
+        plt.figure(figsize=(10, 5))
+        sns.histplot(df[column], kde=True, bins=30)
+        plt.title(f"Distribution of {column}")
+        plt.savefig(f"../reports/figures/{column}_distribution.png")
+        plt.close()
 
-def load_spark_output(input_path):
-    """Load Spark output files into a single pandas DataFrame."""
-    all_files = glob.glob(f"{input_path}/part-*")
-    df_list = [pd.read_csv(file) for file in all_files]
-    df = pd.concat(df_list, ignore_index=True)
-    print(f"Loaded data with {len(df)} rows and {len(df.columns)} columns.")
-    return df
-
-def save_plot(plt, filename):
-    """Save the plot to the figures directory."""
-    plot_path = os.path.join(FIGURES_PATH, filename)
-    plt.savefig(plot_path)
-    print(f"Plot saved: {plot_path}")
+def plot_correlations(df):
+    """Plot correlation heatmap."""
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(df.corr(), annot=True, cmap="coolwarm", fmt=".2f")
+    plt.title("Correlation Heatmap")
+    plt.savefig("../reports/figures/correlation_heatmap.png")
     plt.close()
 
-def plot_distribution(df, column):
-    """Plot the distribution of a numeric column."""
-    plt.figure(figsize=(8, 6))
-    sns.histplot(df[column], kde=True, bins=30)
-    plt.title(f"Distribution of {column}")
-    plt.xlabel(column)
-    plt.ylabel("Frequency")
-    save_plot(plt, f"{column}_distribution.png")
+def boxplot_features(df, column_list, target_column):
+    """Create boxplots for categorical features."""
+    for column in column_list:
+        plt.figure(figsize=(10, 5))
+        sns.boxplot(x=column, y=target_column, data=df)
+        plt.title(f"{target_column} vs {column}")
+        plt.savefig(f"../reports/figures/{column}_boxplot.png")
+        plt.close()
 
-def plot_average_assessed_value_by_year(df):
-    """Plot average assessed value by year."""
-    avg_values = df.groupby("roll_year")["assessed_value"].mean().reset_index()
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=avg_values, x="roll_year", y="assessed_value", marker="o")
-    plt.title("Average Assessed Value by Year")
-    plt.xlabel("Year")
-    plt.ylabel("Average Assessed Value")
-    save_plot(plt, "average_assessed_value_by_year.png")
+def scatter_plots(df, numeric_columns, target_column):
+    """Create scatter plots for numeric features."""
+    for column in numeric_columns:
+        plt.figure(figsize=(10, 5))
+        sns.scatterplot(x=column, y=target_column, data=df)
+        plt.title(f"{target_column} vs {column}")
+        plt.savefig(f"../reports/figures/{column}_scatter.png")
+        plt.close()
 
-def plot_average_assessed_value_by_property_type(df):
-    """Plot average assessed value by property type."""
-    avg_values = df.groupby("property_type")["assessed_value"].mean().reset_index()
-    plt.figure(figsize=(12, 6))
-    sns.barplot(data=avg_values, x="property_type", y="assessed_value")
-    plt.title("Average Assessed Value by Property Type")
-    plt.xlabel("Property Type")
-    plt.ylabel("Average Assessed Value")
-    plt.xticks(rotation=45)
-    save_plot(plt, "average_assessed_value_by_property_type.png")
+def eda_pipeline(data_path, target_column):
+    """Run the EDA pipeline."""
+    df = load_data(data_path)
 
-def plot_correlation_heatmap(df):
-    """Plot a correlation heatmap for numeric columns."""
-    numeric_df = df.select_dtypes(include=["number"])
-    plt.figure(figsize=(10, 8))
-    correlation_matrix = numeric_df.corr()
-    sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm", fmt=".2f")
-    plt.title("Correlation Heatmap")
-    save_plot(plt, "correlation_heatmap.png")
+    numeric_columns = df.select_dtypes(include=["float64", "int64"]).columns.tolist()
+    categorical_columns = df.select_dtypes(include=["object"]).columns.tolist()
 
-def scatter_plot(df, x_col, y_col):
-    """Scatter plot for two variables."""
-    plt.figure(figsize=(8, 6))
-    sns.scatterplot(data=df, x=x_col, y=y_col)
-    plt.title(f"{y_col} vs {x_col}")
-    plt.xlabel(x_col)
-    plt.ylabel(y_col)
-    save_plot(plt, f"{y_col}_vs_{x_col}.png")
-
-def boxplot_assessed_value_by_year(df):
-    """Boxplot showing the distribution of assessed values by year."""
-    plt.figure(figsize=(12, 6))
-    sns.boxplot(data=df, x="roll_year", y="assessed_value")
-    plt.title("Assessed Value Distribution by Year")
-    plt.xlabel("Year")
-    plt.ylabel("Assessed Value")
-    save_plot(plt, "assessed_value_by_year_boxplot.png")
-
-if __name__ == "__main__":
-    # Load data from processed folder
-    df = load_spark_output(PROCESSED_DATA_PATH)
-
-    # Perform EDA and generate plots
-    plot_distribution(df, "assessed_value")
-    plot_average_assessed_value_by_year(df)
-    plot_average_assessed_value_by_property_type(df)
-    plot_correlation_heatmap(df)
-    scatter_plot(df, x_col="land_size_sm", y_col="assessed_value")
-    boxplot_assessed_value_by_year(df)
+    plot_distributions(df, numeric_columns)
+    plot_correlations(df)
+    boxplot_features(df, categorical_columns, target_column)
+    scatter_plots(df, numeric_columns, target_column)
