@@ -31,15 +31,15 @@ def main():
     print("Initializing Spark session...")
     spark = create_spark_session(config_path)
 
-    # raw_data = read_csv_with_spark(spark, raw_data_path)
-    # if raw_data is None:
-    #     print("Raw data loading failed. Exiting pipeline.")
-    #     return
-    # save_spark_dataframe(raw_data, uncleaned_data_path)
+    raw_data = read_csv_with_spark(spark, raw_data_path)
+    if raw_data is None:
+        print("Raw data loading failed. Exiting pipeline.")
+        return
+    save_spark_dataframe(raw_data, uncleaned_data_path)
     
-    # # Step 2: Clean raw data with Spark
-    # print("Cleaning data...")
-    # clean_data_spark(spark, uncleaned_data_path, cleaned_data_path)
+    # Step 2: Clean raw data with Spark
+    print("Cleaning data...")
+    clean_data_spark(spark, uncleaned_data_path, cleaned_data_path)
    
 
     # Step 3: Perform feature engineering
@@ -50,7 +50,4 @@ def main():
     # print("Running EDA...")
     # eda_pipeline(feature_engineered_data_path, "assessed_value")
 
-    print("Pipeline executed successfully!")
-
-if __name__ == "__main__":
-    main()
+    print("Pipel

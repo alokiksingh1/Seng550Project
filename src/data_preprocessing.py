@@ -13,13 +13,17 @@ def clean_data_spark(spark, input_path, output_path):
 
     # Handle missing values with defaults
     default_values = {
-        "assessed_value": 0.0,
-        "re_assessed_value": 0.0,
-        "nr_assessed_value": 0.0,
-        "fl_assessed_value": 0.0,
-        "comm_name": "Unknown",
-        "property_type": "Unknown",
-        "land_use_designation": "Unknown",
+       "ASSESSED_VALUE": 0.0,
+        "RE_ASSESSED_VALUE": 0.0,
+        "NR_ASSESSED_VALUE": 0.0,
+        "FL_ASSESSED_VALUE": 0.0,
+        "LAND_SIZE_SM": 0.0,
+        "LAND_SIZE_SF": 0.0,
+        "LAND_SIZE_AC": 0.0,
+        "YEAR_OF_CONSTRUCTION": 0,
+        "PROPERTY_TYPE": "Unknown",
+        "COMM_NAME": "Unknown",
+        "LAND_USE_DESIGNATION": "Unknown",
     }
     for col_name, default_value in default_values.items():
         if col_name in df.columns:
