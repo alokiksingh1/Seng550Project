@@ -1,13 +1,12 @@
-from pyspark.ml.feature import StringIndexer, OneHotEncoder, VectorAssembler
-from pyspark.ml import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-def create_feature_pipeline(input_cols, output_col):
-    #Create a feature engineering pipeline.
-    stages = []
-    for col in input_cols:
-        indexer = StringIndexer(inputCol=col, outputCol=f"{col}_index")
-        encoder = OneHotEncoder(inputCol=f"{col}_index", outputCol=f"{col}_vec")
-        stages += [indexer, encoder]
-    assembler = VectorAssembler(inputCols=[f"{col}_vec" for col in input_cols], outputCol=output_col)
-    stages.append(assembler)
-    return Pipeline(stages=stages)
+def create_feature_pipeline(numerical_cols, categorical_cols):
+    """Create a pipeline for feature engineering."""
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', StandardScaler(), numerical_cols),
+            ('cat', OneHotEncoder(), categorical_cols)
+        ]
+    )
+    return preprocessor
