@@ -32,6 +32,7 @@ def main():
     print("Training and evaluating the model...")
     train_and_evaluate_model(spark, engineered_data_path, model_type="linear")
 
+
     print("Pipeline executed successfully!")
 
 if __name__ == "__main__":

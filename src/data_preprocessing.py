@@ -20,51 +20,81 @@ def create_spark_session(config_path):
 
 def remove_outliers(df, column, method="iqr"):
     """
-    Remove outliers from a Spark DataFrame based on the specified method.
+    Remove outliers from a DataFrame column using the specified method.
 
     Args:
-        df: Input Spark DataFrame.
-        column: Column name to apply outlier removal.
-        method: Outlier detection method ("iqr" or "std").
+        df (DataFrame): Input DataFrame.
+        column (str): Column name to process.
+        method (str): Method for outlier removal (default: "iqr").
 
     Returns:
-        Spark DataFrame without outliers.
+        DataFrame: DataFrame with outliers removed.
     """
     if method == "iqr":
-        # Calculate Q1, Q3, and IQR
-        quantiles = df.approxQuantile(column, [0.25, 0.75], 0.05)
-        q1, q3 = quantiles[0], quantiles[1]
+        # Calculate IQR and filter out outliers
+        q1, q3 = df.approxQuantile(column, [0.25, 0.75], 0.05)
         iqr = q3 - q1
-
-        # Define lower and upper bounds
         lower_bound = q1 - 1.5 * iqr
         upper_bound = q3 + 1.5 * iqr
-
-        # Filter out rows outside the bounds
-        df = df.filter((F.col(column) >= lower_bound) & (F.col(column) <= upper_bound))
-        print(f"Outliers removed from {column} using IQR.")
-    elif method == "std":
-        # Calculate mean and standard deviation
-        stats = df.select(
-            F.mean(F.col(column)).alias("mean"),
-            F.stddev(F.col(column)).alias("std")
-        ).collect()[0]
-        mean, stddev = stats["mean"], stats["std"]
-
-        # Define lower and upper bounds
-        lower_bound = mean - 3 * stddev
-        upper_bound = mean + 3 * stddev
-
-        # Filter out rows outside the bounds
-        df = df.filter((F.col(column) >= lower_bound) & (F.col(column) <= upper_bound))
-        print(f"Outliers removed from {column} using standard deviation.")
+        return df.filter((F.col(column) >= lower_bound) & (F.col(column) <= upper_bound))
     else:
-        raise ValueError("Invalid method. Choose 'iqr' or 'std'.")
+        raise ValueError(f"Unknown method '{method}' for outlier removal.")
 
-    return df
 
 
 def filter_and_clean_data(spark, raw_data_path, processed_data_path):
+    """
+    Load raw data, clean it, handle nulls, and filter outliers.
+    Save the cleaned and filtered data to the processed data path.
+    """
+    # Load raw data
+    df = spark.read.csv(raw_data_path, header=True, inferSchema=True)
+
+    # Example: Convert year_of_construction to property_age
+    current_year = 2023
+    df = df.withColumn(
+        "property_age",
+        F.when(F.col("year_of_construction").isNotNull(), current_year - F.col("year_of_construction")).otherwise(None)
+    )
+
+    # Handle nulls in numerical columns
+    numerical_fill_values = {
+        "property_age": 0,
+        "assessed_value": 0,
+        "land_size_sm": 0,
+        "land_size_sf": 0,
+        "land_size_ac": 0
+    }
+    df = df.fillna(numerical_fill_values)
+
+    # Handle nulls in categorical columns
+    categorical_fill_values = {
+        "assessment_class": "Unknown",
+        "sub_property_use": "Unknown"
+    }
+    df = df.fillna(categorical_fill_values)
+
+    # Drop rows with nulls in critical columns
+    critical_columns = ["property_age", "assessed_value"]
+    df = df.dropna(subset=critical_columns)
+
+    # Remove outliers using IQR method for numerical columns
+    def remove_outliers(df, column):
+        q1, q3 = df.approxQuantile(column, [0.25, 0.75], 0.05)
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+        return df.filter((F.col(column) >= lower_bound) & (F.col(column) <= upper_bound))
+
+    numerical_columns = ["assessed_value", "land_size_sm", "land_size_sf", "land_size_ac"]
+    for column in numerical_columns:
+        if column in df.columns:
+            df = remove_outliers(df, column)
+            print(f"Outliers removed from {column} using IQR.")
+
+    # Save the cleaned and filtered data
+    df.write.csv(processed_data_path, header=True, mode="overwrite")
+    print(f"Filtered and cleaned data saved to {processed_data_path}")
     """
     Filter data for the last 5 years, remove outliers, and save the cleaned data.
 
