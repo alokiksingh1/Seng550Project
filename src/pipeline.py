@@ -4,7 +4,7 @@ from data_preprocessing import create_spark_session, filter_last_5_years
 def main():
     # Paths and configurations
     config_path = "../config/spark_config.json"
-    api_url = "https://data.calgary.ca/resource/4ur7-wsgc.json"
+    api_url = "https://data.calgary.ca/resource/4ur7-wsgc.json?$query=SELECT%0A%20%20%60roll_year%60%2C%0A%20%20%60roll_number%60%2C%0A%20%20%60address%60%2C%0A%20%20%60assessed_value%60%2C%0A%20%20%60assessment_class%60%2C%0A%20%20%60assessment_class_description%60%2C%0A%20%20%60re_assessed_value%60%2C%0A%20%20%60nr_assessed_value%60%2C%0A%20%20%60fl_assessed_value%60%2C%0A%20%20%60comm_code%60%2C%0A%20%20%60comm_name%60%2C%0A%20%20%60year_of_construction%60%2C%0A%20%20%60land_use_designation%60%2C%0A%20%20%60property_type%60%2C%0A%20%20%60land_size_sm%60%2C%0A%20%20%60land_size_sf%60%2C%0A%20%20%60land_size_ac%60%2C%0A%20%20%60sub_property_use%60%2C%0A%20%20%60multipolygon%60"
     raw_data_path = "../data/raw/calgary_housing_raw.csv"
     processed_data_path = "../data/processed/calgary_housing_filtered/"
 
