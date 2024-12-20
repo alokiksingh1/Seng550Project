@@ -106,3 +106,14 @@ def save_spark_dataframe(df, output_path):
 #     if spark_df is not None:
 #         # Perform some operation or save
 #         save_spark_dataframe(spark_df, "../data/processed/spark_output/")
+
+
+
+
+
+if __name__ == "__main__":
+    api_url = "https://data.calgary.ca/resource/4ur7-wsgc.json"
+    raw_data_path = "../data/raw/calgary_housing_raw.csv"
+    success = fetch_all_data_with_pagination(api_url, limit=1000, total_limit=100000, raw_data_path=raw_data_path)
+    if not success:
+        print("Data fetching failed.")
