@@ -4,3 +4,8 @@ pyyaml
 scikit-learn
 requests
 pyspark
+seaborn
+matplotlib
+jupyter
+ipykernel
+findspark
