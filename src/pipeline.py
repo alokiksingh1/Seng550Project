@@ -2,6 +2,8 @@ from pyspark.sql import SparkSession
 from data_collection import read_csv_with_spark, save_spark_dataframe
 from data_preprocessing import clean_data_spark
 from feature_engineering import feature_engineering_spark
+from model_training import train_and_evaluate_model
+
 from eda import eda_pipeline
 import os
 
@@ -26,6 +28,8 @@ def main():
     preprocessed_data_path = "../data/processed/pre-processed_data/"
     feature_engineered_data_path = "../data/engineered/calgary_housing_features.csv"
     eda_output_path = "../reports/figures"
+    model_output_path = "../models/re_assessed_value_model"
+    predictions_output_path = "../data/predictions/re_assessed_value_predictions.csv"
 
     # Step 1: Initialize Spark session
     print("Initializing Spark session...")
@@ -49,8 +53,13 @@ def main():
     # # Step 4: Perform EDA
     # print("Running EDA...")
     # eda_pipeline(feature_engineered_data_path, "assessed_value")
+    
+    print("Training and evaluating the model...")
+    train_and_evaluate_model(spark, feature_engineered_data_path, model_output_path, predictions_output_path)
+
 
     print("Pipeline executed successfully!")
 
 if __name__ == "__main__":
     main()
+ 
