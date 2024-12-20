@@ -66,7 +66,7 @@ def read_csv_with_spark(spark, file_path):
         print(f"Loading data from {file_path}...")
         if os.path.isdir(file_path):
             # Handle partitioned files (e.g., Spark outputs multiple CSV files)
-            return spark.read.csv(f"{file_path}/*.csv", header=True, inferSchema=True)
+            return spark.read.csv(f"{file_path}/*.csv", header=True)
         else:
             # Single CSV file
             return spark.read.csv(file_path, header=True, inferSchema=True)
@@ -88,21 +88,21 @@ def save_spark_dataframe(df, output_path):
     print(f"Data saved to {output_path}")
 
 
-if __name__ == "__main__":
-    # Example usage
-    api_url = "https://data.calgary.ca/resource/4ur7-wsgc.json"
-    raw_data_path = "../data/raw/calgary_housing_raw.csv"
-    config_path = "../config/spark_config.json"
+# if __name__ == "__main__":
+#     # Example usage
+#     api_url = "https://data.calgary.ca/resource/4ur7-wsgc.json"
+#     raw_data_path = "../data/raw/calgary_housing_raw.csv"
+#     config_path = "../config/spark_config.json"
 
-    # Fetch data using API (if needed)
-    if not os.path.exists(raw_data_path):
-        fetch_all_data_with_pagination(api_url, limit=1000, total_limit=100000, raw_data_path=raw_data_path)
+#     # Fetch data using API (if needed)
+#     if not os.path.exists(raw_data_path):
+#         fetch_all_data_with_pagination(api_url, limit=1000, total_limit=100000, raw_data_path=raw_data_path)
 
-    # Create Spark session
-    spark = create_spark_session(config_path)
+#     # Create Spark session
+#     spark = create_spark_session(config_path)
 
-    # Read CSV with Spark
-    spark_df = read_csv_with_spark(spark, raw_data_path)
-    if spark_df is not None:
-        # Perform some operation or save
-        save_spark_dataframe(spark_df, "../data/processed/spark_output/")
+#     # Read CSV with Spark
+#     spark_df = read_csv_with_spark(spark, raw_data_path)
+#     if spark_df is not None:
+#         # Perform some operation or save
+#         save_spark_dataframe(spark_df, "../data/processed/spark_output/")

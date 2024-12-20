@@ -50,4 +50,7 @@ def main():
     # print("Running EDA...")
     # eda_pipeline(feature_engineered_data_path, "assessed_value")
 
-    print("Pipel
+    print("Pipeline executed successfully!")
+
+if __name__ == "__main__":
+    main()
