@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from data_collection import read_csv_with_spark, save_spark_dataframe
+from data_collection import fetch_all_data_with_pagination, read_csv_with_spark, save_spark_dataframe
 from data_preprocessing import clean_data_spark
 from feature_engineering import feature_engineering_spark
 from model_training import train_and_evaluate_model
@@ -22,6 +22,7 @@ def create_spark_session(config_path):
 
 def main():
     # Paths and configurations
+    api_url = "https://data.calgary.ca/resource/4ur7-wsgc.json"
     config_path = "../config/spark_config.json"
     raw_data_path = "../data/raw/calgary_housing_raw.csv"
     cleaned_data_path = "../data/processed/calgary_housing_cleaned/"
@@ -35,6 +36,10 @@ def main():
     # Step 1: Initialize Spark session
     print("Initializing Spark session...")
     spark = create_spark_session(config_path)
+    
+    success = fetch_all_data_with_pagination(api_url, limit=1000, total_limit=100000, raw_data_path=raw_data_path)
+    if not success:
+        print("Data fetching failed.")
 
     # raw_data = read_csv_with_spark(spark, raw_data_path)
     # if raw_data is None:
