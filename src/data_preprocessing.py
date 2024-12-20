@@ -1,3 +1,4 @@
+from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when
 from pyspark.sql.types import IntegerType, DoubleType
 
@@ -122,3 +123,17 @@ def clean_data_spark(spark, input_path, output_path):
     # Save cleaned data
     df.write.csv(output_path, header=True, mode="overwrite")
     print(f"Cleaned data saved to {output_path}")
+    
+if __name__ == "__main__":
+    # Hardcoded input and output paths for testing
+    input_path = "../data/raw/calgary_housing_raw.csv"
+    output_path = "../data/processed/calgary_housing_cleaned/"
+
+    # Initialize Spark session
+    spark = SparkSession.builder \
+        .appName("Data Cleaning") \
+        .master("local[*]") \
+        .getOrCreate()
+
+    # Run the cleaning function
+    clean_data_spark(spark, input_path, output_path)
