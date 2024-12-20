@@ -19,6 +19,7 @@ def create_spark_session(config_path):
     spark.sparkContext.setLogLevel(config["log_level"])
     return spark
 
+
 def main():
     # Paths and configurations
     config_path = "../config/spark_config.json"
