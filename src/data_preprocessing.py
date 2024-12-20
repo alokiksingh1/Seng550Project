@@ -1,124 +1,127 @@
-from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.window import Window
-from pyspark.sql.types import DoubleType
+from pyspark.sql.types import IntegerType, DoubleType
 from datetime import datetime
-
-
+from pyspark.sql import SparkSession
+import json
 def create_spark_session(config_path):
-    """Create a Spark session using the config."""
-    import json
+    """
+    Create a Spark session using the configuration file.
+
+    Args:
+        config_path (str): Path to the configuration file.
+
+    Returns:
+        SparkSession: A configured Spark session.
+    """
     with open(config_path, "r") as file:
         config = json.load(file)
+
     spark = SparkSession.builder \
         .appName(config["app_name"]) \
         .master(config["master"]) \
         .getOrCreate()
     spark.sparkContext.setLogLevel(config["log_level"])
     return spark
-
-
 def remove_outliers(df, column, method="iqr"):
     """
-    Remove outliers from a DataFrame column using the specified method.
+    Remove rows where the specified column contains outliers based on the given method.
 
     Args:
         df (DataFrame): Input DataFrame.
-        column (str): Column name to process.
-        method (str): Method for outlier removal (default: "iqr").
+        column (str): Column name for outlier removal.
+        method (str): Outlier removal method. Default is "iqr".
 
     Returns:
         DataFrame: DataFrame with outliers removed.
     """
     if method == "iqr":
-        # Calculate IQR and filter out outliers
-        q1, q3 = df.approxQuantile(column, [0.25, 0.75], 0.05)
+        # Check if the column has any non-zero or non-default values
+        if df.filter(F.col(column) > 0).count() == 0:
+            print(f"Skipping outlier removal for column: {column} (no valid values)")
+            return df
+
+        # Calculate IQR
+        quantiles = df.approxQuantile(column, [0.25, 0.75], 0.01)
+        if len(quantiles) < 2 or quantiles[0] is None or quantiles[1] is None:
+            print(f"Skipping outlier removal for column: {column} (unable to compute quantiles)")
+            return df
+
+        q1, q3 = quantiles
         iqr = q3 - q1
         lower_bound = q1 - 1.5 * iqr
         upper_bound = q3 + 1.5 * iqr
+
+        # Filter out outliers
         return df.filter((F.col(column) >= lower_bound) & (F.col(column) <= upper_bound))
     else:
-        raise ValueError(f"Unknown method '{method}' for outlier removal.")
-
-
+        raise ValueError(f"Unsupported method: {method}")
 
 def filter_and_clean_data(spark, raw_data_path, processed_data_path):
     """
-    Load raw data, clean it, handle nulls, and filter outliers.
+    Load raw data, clean it, handle missing columns, and filter outliers.
     Save the cleaned and filtered data to the processed data path.
     """
     # Load raw data
     df = spark.read.csv(raw_data_path, header=True, inferSchema=True)
+    print(f"Initial row count: {df.count()}")
 
-    # Example: Convert year_of_construction to property_age
-    current_year = 2023
-    df = df.withColumn(
-        "property_age",
-        F.when(F.col("year_of_construction").isNotNull(), current_year - F.col("year_of_construction")).otherwise(None)
-    )
+    # Drop duplicates
+    df = df.dropDuplicates()
 
-    # Handle nulls in numerical columns
-    numerical_fill_values = {
-        "property_age": 0,
-        "assessed_value": 0,
-        "land_size_sm": 0,
-        "land_size_sf": 0,
-        "land_size_ac": 0
+    # Add missing columns with default values
+    required_columns = {
+        "ASSESSED_VALUE": 0.0,
+        "LAND_SIZE_SM": 0.0,
+        "LAND_SIZE_SF": 0.0,
+        "LAND_SIZE_AC": 0.0,
+        "YEAR_OF_CONSTRUCTION": 0,
+        "PROPERTY_TYPE": "Unknown",
     }
-    df = df.fillna(numerical_fill_values)
 
-    # Handle nulls in categorical columns
-    categorical_fill_values = {
-        "assessment_class": "Unknown",
-        "sub_property_use": "Unknown"
-    }
-    df = df.fillna(categorical_fill_values)
+    for col_name, default_value in required_columns.items():
+        if col_name not in df.columns:
+            df = df.withColumn(col_name, F.lit(default_value))
 
-    # Drop rows with nulls in critical columns
-    critical_columns = ["property_age", "assessed_value"]
+    print(f"Rows after adding missing columns: {df.count()}")
+
+    # Calculate property age
+    current_year = datetime.now().year
+    if "YEAR_OF_CONSTRUCTION" in df.columns:
+        df = df.withColumn(
+            "PROPERTY_AGE",
+            F.when(F.col("YEAR_OF_CONSTRUCTION") > 0, current_year - F.col("YEAR_OF_CONSTRUCTION")).otherwise(0),
+        )
+    else:
+        df = df.withColumn("PROPERTY_AGE", F.lit(0))
+
+    # Log `PROPERTY_AGE` for debugging
+    print("Sample PROPERTY_AGE values:")
+    df.select("YEAR_OF_CONSTRUCTION", "PROPERTY_AGE").show(10)
+
+    # Drop unnecessary columns
+    unnecessary_columns = ["MULTIPOLYGON", "COMM_CODE"]
+    df = df.drop(*[col for col in unnecessary_columns if col in df.columns])
+
+    # Drop rows with missing critical values
+    critical_columns = ["ASSESSED_VALUE", "PROPERTY_AGE"]
     df = df.dropna(subset=critical_columns)
 
-    # Remove outliers using IQR method for numerical columns
-    def remove_outliers(df, column):
-        q1, q3 = df.approxQuantile(column, [0.25, 0.75], 0.05)
-        iqr = q3 - q1
-        lower_bound = q1 - 1.5 * iqr
-        upper_bound = q3 + 1.5 * iqr
-        return df.filter((F.col(column) >= lower_bound) & (F.col(column) <= upper_bound))
+    print(f"Rows after dropping NA: {df.count()}")
 
-    numerical_columns = ["assessed_value", "land_size_sm", "land_size_sf", "land_size_ac"]
+    # Remove outliers using IQR
+    numerical_columns = ["ASSESSED_VALUE", "LAND_SIZE_SM", "LAND_SIZE_SF", "LAND_SIZE_AC"]
     for column in numerical_columns:
         if column in df.columns:
-            df = remove_outliers(df, column)
-            print(f"Outliers removed from {column} using IQR.")
+            print(f"Removing outliers in column: {column}")
+            df_before = df.count()
+            df = remove_outliers(df, column, method="iqr")
+            df_after = df.count()
+            print(f"Rows before: {df_before}, after: {df_after}")
 
     # Save the cleaned and filtered data
-    df.write.csv(processed_data_path, header=True, mode="overwrite")
-    print(f"Filtered and cleaned data saved to {processed_data_path}")
-    """
-    Filter data for the last 5 years, remove outliers, and save the cleaned data.
-
-    Args:
-        spark: SparkSession object.
-        raw_data_path: Path to the raw data CSV file.
-        processed_data_path: Path to save the cleaned data.
-    """
-    current_year = datetime.now().year
-
-    # Load the data
-    df = spark.read.csv(raw_data_path, header=True, inferSchema=True)
-
-    # Filter rows where roll_year is within the last 5 years
-    df = df.filter(df.roll_year >= (current_year - 5))
-
-    # Remove outliers for numeric columns
-    numeric_columns = ["assessed_value", "land_size_sm", "land_size_sf", "land_size_ac"]
-    for column in numeric_columns:
-        df = remove_outliers(df, column, method="iqr")
-
-    # Sort the data in descending order by year
-    df = df.orderBy(df.roll_year.desc())
-
-    # Save the cleaned data
-    df.write.csv(processed_data_path, header=True, mode="overwrite")
-    print(f"Filtered and cleaned data saved to {processed_data_path}")
+    final_row_count = df.count()
+    if final_row_count > 0:
+        df.write.csv(processed_data_path, header=True, mode="overwrite")
+        print(f"Filtered and cleaned data saved to {processed_data_path}")
+    else:
+        print("No data available after filtering. Nothing saved.")
