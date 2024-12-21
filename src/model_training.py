@@ -18,7 +18,6 @@ def train_and_evaluate_model(spark, engineered_data_path, model_output_path, pre
     print("Loading feature-engineered data...")
     df = spark.read.csv(engineered_data_path, header=True, inferSchema=True)
 
-    # Ensure required columns exist
     feature_columns = ["assessed_value", "land_size_sf", "property_age", "price_per_sqft", "avg_comm_value"]
     label_column = "re_assessed_value"
     missing_columns = [col for col in feature_columns + [label_column] if col not in df.columns]
@@ -31,9 +30,9 @@ def train_and_evaluate_model(spark, engineered_data_path, model_output_path, pre
     assembler = VectorAssembler(inputCols=feature_columns, outputCol="features")
     df = assembler.transform(df)
 
-    # Split data into training (80%) and testing (20%)
+    # Split data into training and testing
     print("Splitting data...")
-    train_df, test_df = df.randomSplit([0.8, 0.2], seed=42)
+    train_df, test_df = df.randomSplit([0.8, 0.2], seed=42) # 80/20 split
 
     # Step 3: Train the model
     print("Training the model...")
@@ -54,9 +53,9 @@ def train_and_evaluate_model(spark, engineered_data_path, model_output_path, pre
     # Step 5: Save the model
     print("Saving the model...")
     os.makedirs(model_output_path, exist_ok=True)
-    model.write().overwrite().save(model_output_path)  # Overwrite existing model if it already exists
+    model.write().overwrite().save(model_output_path) 
 
-    # Save predictions for inspection
+    # Save predictions
     print("Saving predictions...")
     # Convert the `features` column to a string or drop it before saving
     predictions_to_save = predictions.withColumn("features", predictions["features"].cast("string"))

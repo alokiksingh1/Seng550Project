@@ -22,7 +22,7 @@ def fetch_all_data_with_pagination(api_url, limit, total_limit, raw_data_path):
 
     while len(all_data) < total_limit:
         remaining_rows = total_limit - len(all_data)
-        current_limit = min(limit, remaining_rows)  # Adjust the batch size for the last fetch
+        current_limit = min(limit, remaining_rows) 
         paginated_url = f"{api_url}?$limit={current_limit}&$offset={offset}"
         print(f"Fetching data from: {paginated_url}")
         response = requests.get(paginated_url)
@@ -65,7 +65,7 @@ def read_csv_with_spark(spark, file_path):
     if os.path.exists(file_path):
         print(f"Loading data from {file_path}...")
         if os.path.isdir(file_path):
-            # Handle partitioned files (e.g., Spark outputs multiple CSV files)
+            # Handle partitioned files
             return spark.read.csv(f"{file_path}/*.csv", header=True)
         else:
             # Single CSV file
@@ -88,24 +88,6 @@ def save_spark_dataframe(df, output_path):
     print(f"Data saved to {output_path}")
 
 
-# if __name__ == "__main__":
-#     # Example usage
-#     api_url = "https://data.calgary.ca/resource/4ur7-wsgc.json"
-#     raw_data_path = "../data/raw/calgary_housing_raw.csv"
-#     config_path = "../config/spark_config.json"
-
-#     # Fetch data using API (if needed)
-#     if not os.path.exists(raw_data_path):
-#         fetch_all_data_with_pagination(api_url, limit=1000, total_limit=100000, raw_data_path=raw_data_path)
-
-#     # Create Spark session
-#     spark = create_spark_session(config_path)
-
-#     # Read CSV with Spark
-#     spark_df = read_csv_with_spark(spark, raw_data_path)
-#     if spark_df is not None:
-#         # Perform some operation or save
-#         save_spark_dataframe(spark_df, "../data/processed/spark_output/")
 
 
 if __name__ == "__main__":

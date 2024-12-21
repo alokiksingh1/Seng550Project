@@ -25,6 +25,7 @@ def main():
     api_url = "https://data.calgary.ca/resource/4ur7-wsgc.json"
     config_path = "../config/spark_config.json"
     raw_data_path = "../data/raw/calgary_housing_raw.csv"
+    full_data_path = "../data/raw/calgary_housing_full.csv"
     cleaned_data_path = "../data/processed/calgary_housing_cleaned/"
     uncleaned_data_path = "../data/processed/collection_spark_output/"
     preprocessed_data_path = "../data/processed/pre-processed_data/"
@@ -38,8 +39,13 @@ def main():
     spark = create_spark_session(config_path)
     
     success = fetch_all_data_with_pagination(api_url, limit=1000, total_limit=100000, raw_data_path=raw_data_path)
+    # if unsuccessful, try fetching the full data through already downloaded csv
     if not success:
-        print("Data fetching failed.")
+        raw_data = read_csv_with_spark(spark, full_data_path)
+        if raw_data is None:
+            print("Raw data loading failed. Exiting pipeline.")
+            return
+        print("Data fetching through csv instead.")
 
     # raw_data = read_csv_with_spark(spark, raw_data_path)
     # if raw_data is None:
@@ -60,6 +66,7 @@ def main():
     # print("Running EDA...")
     # eda_pipeline(feature_engineered_data_path, "assessed_value")
     
+    # Step 5: Train and evaluate the model
     print("Training and evaluating the model...")
     train_and_evaluate_model(spark, feature_engineered_data_path, model_output_path, predictions_output_path)
 
